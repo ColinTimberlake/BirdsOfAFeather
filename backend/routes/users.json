@@ -1,0 +1,32 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "user": "user",
+      "email": "user@example.com",
+      "hashedPassword": "$2a$10$..."
+    },
+    {
+      "id": 2,
+      "user": "Justin",
+      "email": "jdbigcountry@yahoo.com",
+      "hashedPassword": "$2b$10$fRE0UKdDbF3OHh8NbmiDoelyycbNMCxBM8IqqEF17Pi1RTdr4p986",
+      "createdAt": "2025-11-26T20:36:45.579Z"
+    },
+    {
+      "id": 3,
+      "user": "BirdLady",
+      "email": "CourtneyEddy1993@yahoo.com",
+      "hashedPassword": "$2b$10$1.Da49UZK882DbuV0XpIC.xswmHCA3OHyjKM5GnpclN6dyDdwkgye",
+      "createdAt": "2025-12-08T19:25:09.189Z"
+    }
+  ],
+  "sessions": [
+    {
+      "token": "e6c8d21c9962bee6288183010cd4ef24e7d66cd25efb0a0d91188e327f7ccfbe",
+      "userId": 2,
+      "expiresAt": 1765225378383,
+      "createdAt": "2025-12-08T19:22:58.383Z"
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+//user profile notes
+/*
+social media profile
+pictures is a central piece of the profile. 
+bio/about me section
+links to other socials/ maybe a contact to go birding together in the future
+follow button and a message button. 
+this could feed into a much larger way for people to connect not only with
+just their friends but other people in the area with similar goals with use of the app 
+
+what kind of users would be ideal for my app?
+    1.young people who want to get outside and want a cheap and free to explore hobby
+    2.families looking for a fun activity to do together
+    3.potentially older people who want to get more activity in their lives
+
+types of auth flow notes:
+implicit flow with form post. I am not sure of the validity of how I can store user data safely and securely. 
+I will have to do some research into that. I will see what other ways I can use for my app. 
+****side note when it is built I will need to make sure that I protect from sql inject based attacks. 
+*/
+
+
+//seems like user has multiple sightings
+//sightings have one user
+
+//birds can be uploaded by multiple users and can be a part of multiple sightings
+// users-sightings: one to many
+//birds-users: many to one
+// birds to sightings: many to many
+
+
+//Outline your planned endpoints: /api/users, /api/sightings, /api/birds. Note what methods (GET, POST, PUT, DELETE) each needs
+
+/*
+/api/users
+    -/get/:id #would this also be sued to fiind the users friends
+    -/post/register
+    -/post/login
+    -/post/logout
+    -/put #this would allow for user updating profile
+    -/delete #deleting info from profile or deleting their entire profile
+
+/api/sightings
+    -/get/:id
+    -/get/all
+    -/post #creating an individual sighting for the user and selecting the bird that was seen
+    -/put  #updating the post that the user makes in case they want to change information about their sighting ir maybe they made a mistake on the bird
+
+/api/birds
+    -/get/:id
+    -/get/all
+
+
+middleware functions:
+readUser
+writeUser
+readSightings
+writeSightings
+readBirds
+
+
+JWT User Validation:
+Used a token based system with a json file for earlier authSystem. private vs public signed tokens. what would work better. private would keep user information more secure
+
+Authorization: This is the most common scenario for using JWT. Once the user is logged in, each subsequent request will include the JWT, allowing the user to access routes, services, and resources that are permitted with that token. Single Sign On is a feature that widely uses JWT nowadays because of its small overhead and its ability to be easily used across different domains.
+
+Information Exchange: JSON Web Tokens are a good way of securely transmitting information between parties. Because JWTs can be signed—for example, using public/private key pairs—you can be sure the senders are who they say they are. Additionally, as the signature is calculated using the header and the payload, you can also verify that the content hasn't been tampered with.
+
+three parts header, payload, signature
+header- type of token jwt and signing algorithim used (SHA256, HMAC, RSA) base64URl encoded to form the first part
+payload-contains claims, details about the entity(user) and additional data. registered, public, and private claims
+    registered- predefined claims that are recommended. typically iss(issuer), expirationDate, subject, audience, and others
+    public- they can be deefined at will by the user, however they should be on the IANA JSON Web token registry to avoid collisions.
+    private: these are the ones agreed on by parties that use them that are neither public or registered.
+thia part is then base64URL coded to be the second part of the JWT 
+signature-created using the encoded header, encoded, payload, a secret, and the encryption algorithim used in the header and then sign that. this makes sure it wasn't changed along the way.
+*/

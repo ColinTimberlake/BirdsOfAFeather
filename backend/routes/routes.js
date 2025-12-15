@@ -15,6 +15,34 @@ const bcryptjs= require('bcryptjs');
 app.use(express.json());
 app.use(express.static("public"));
 
+const authenticateToken = async(req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  try {
+    // Verify JWT (use promise version)
+    const user = jwt.verify(token, 'your-secret-key'); // Use the same secret from login!
+    
+    // Check if token is blacklisted
+    const session = await prisma.session.findUnique({ where: { token } });
+    
+    if (!session || session.blacklisted) {
+      return res.status(403).json({ error: 'Token has been revoked' });
+    }
+    
+    // Everything passed - attach user to request and continue
+    req.user = user;
+    next();
+    
+  } catch (error) {
+    return res.status(403).json({ error: 'Invalid or expired token' });
+  }
+};
+
 // Helper functions to read and write users and sessions
 readUsers = () => {
   const data = fs.readFileSync('users.json', 'utf8');
@@ -146,40 +174,42 @@ app.post('/api/login', async(req, res) => {
 
   res.status(200).json({ token });
   console.log('User logged in successfully');
+
+  // Calculate expiration time (1 hour from now)
+  const expiresAt = new Date();
+  expiresAt.setHours(expiresAt.getHours() + 1);
+
+  // Save session to database
+  await prisma.session.create({
+    data: {
+      token: token,
+      userId: foundUser.id,
+      expiresAt: expiresAt,
+      blacklisted: false
+    }
+  });
 });
 
 // Auth Routes For User Logout
-app.post('/api/logout', (req, res) => {
-  const { user, email, password} = req.body;
+app.post('/api/logout', async(req, res) => {
+  const {token} = req.body;
 
   //makes sure all fields are filled out
-  if (!user || !email || !password) {
-    return res.status(400).json({ error: 'user not found' });
+  if (!token) {
+    return res.status(400).json({ error: 'Token not found' });
   }  
 
-  const users= readUsers();
-  const sessions=readSessions();
-
-  // Find user by email
-  const foundUser = users.find(u => u.email === req.body.email);
-
-  // Check if user exists
-  if(!foundUser) {
-    return res.status(404).json({error: 'No User Has Been Found'});
+  try {
+    await prisma.session.update({
+      where: { token },
+      data: { blacklisted: true }
+    });
+    
+    res.status(200).json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.log('Logout error:', error);
+    res.status(500).json({ error: 'Logout failed' });
   }
-
-  // Check if password is correct
-  if(!bcryptjs.compareSync(req.body.password, foundUser.hashedPassword)) {
-    return res.status(400).json({error: "Password is Incorrect"});
-  }
-
-  // Remove the user's session
-  const updatedSessions = sessions.filter(session => session.userId !== foundUser.id);
-
-  // Update the sessions array and write to the file
-  sessions.push(updatedSessions);
-  writeSessions(updatedSessions);
-  res.status(201).json("Session token succesfully removed");
 });
 
 /* User Routes

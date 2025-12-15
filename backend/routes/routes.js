@@ -1,6 +1,7 @@
 /* ### Auth Routes
 POST	/auth/register	Creates a new user
 POST	/auth/login	Authenticates user and returns JWT */
+const jwt= require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const express=require('express');
@@ -54,6 +55,7 @@ app.listen(PORT, () => {
 app.post('/api/register', async (req, res) => {
   const { user, email, password } = req.body;
 
+  console.log('Received registration data:', req.body);
   //makes sure all fields are filled out
   if (!user || !email || !password) {
     return res.status(400).json({ error: 'This is wrong' });
@@ -73,31 +75,38 @@ app.post('/api/register', async (req, res) => {
   if(!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
     return res.status(400).json({ error: 'Password must contain at least one lowercase letter, one uppercase letter, and one number' });
   }
-
+  console.log('Password validation passed');
   // Hash the password before storing it
   //const users = readUsers();
-  const currentUser = await prisma.user.findUnique({ where: { email: email } });
-  if (currentUser) {
+  const currentEmail = await prisma.user.findUnique({ where: { email: req.body.email } });
+  if (currentEmail) {
     return res.status(400).json({ error: 'Email is already in use' });
   }
+  const currentUser = await prisma.user.findUnique({ where: { user: req.body.user } });
+  if (currentUser) {
+    return res.status(400).json({ error: 'User is already in use' });
+  }
   const hashedPassword = bcryptjs.hashSync(req.body.password, 10);
-  const newUser = {
-    id: Math.max(...users.map(env => env.id), 0) + 1,
-    user: req.body.user,
-    email: req.body.email,
-    hashedPassword:hashedPassword,
-    createdAt: new Date()
+  try {
+    const newUser= await prisma.user.create({
+      data: {
+        user: req.body.user,
+        email: req.body.email,
+        hashedPassword: hashedPassword
+      }
+    });
+    console.log('all tests passed');
+    res.status(201).json({ message: 'User registered successfully' });
+  } catch (error){
+    console.log('Full error:', error);
+    console.log('Error message:', error.message);
+    console.log('Error code:', error.code);
+    return res.status(500).json({ error: 'Database error', details: error.message });
   };
-
-  // Add the new user to the users array and write to the file
-  users.push(newUser);
-  writeUsers(users);
-  res.status(201).json(newUser);
 });
 
-
 // Auth Routes For User Login
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async(req, res) => {
   const { user, email, password } = req.body;
 
   //makes sure all fields are filled out
@@ -110,13 +119,14 @@ app.post('/api/login', (req, res) => {
     return res.status(400).json({ error: 'Password must be at least 8 characters long' });
   }
 
-  // Check for at least one special character
-  const users = readUsers();
-  const sessions = readSessions();
-  
-  // Find user by email
-  const foundUser = users.find(u => u.email === req.body.email);
 
+  const currentEmail = await prisma.user.findUnique({ where: { email: req.body.email } });
+  if (!currentEmail) {
+    return res.status(400).json({ error: 'There is no account with that email' });
+  }
+  // Find user by email
+  const foundUser = await prisma.user.findUnique({ where: { email: req.body.email } });
+  
   // Check if user exists
   if(!foundUser) {
     return res.status(404).json({error: 'No User Has Been Found'});
@@ -127,23 +137,15 @@ app.post('/api/login', (req, res) => {
     return res.status(400).json({error: "Password is Incorrect"});
   }
 
-  // Create a new session
-  const sessionToken= crypto.randomBytes(32).toString('hex');
-  const now = new Date();
-  const expirationTime = now.getTime() + 60 * 60 * 1000; // Calculate expiration in milliseconds
+  // Generate JWT token
+  const token = jwt.sign(
+    { userId: foundUser.id, email: foundUser.email },
+    'your_jwt_secret_key', // Replace with your secret key
+    { expiresIn: '1h' } // Token expiration time
+  );
 
-  // Create session data object
-  const sessionData = {
-    token: sessionToken,
-    userId: foundUser.id,
-    expiresAt: expirationTime,
-    createdAt: now
-  };
-
-  // Add the new session to the sessions array and write to the file
-  sessions.push(sessionData);
-  writeSessions(sessions);
-  res.status(201).json(sessionData);
+  res.status(200).json({ token });
+  console.log('User logged in successfully');
 });
 
 // Auth Routes For User Logout
